@@ -19,7 +19,9 @@ export interface ReelMetrics {
 export interface SceneAnalysis {
   scene: number;
   description: string;
-  purpose: string;
+  technique: string;
+  psychology: string;
+  retention_score: string;
 }
 
 export interface VideoAnalysis {
@@ -27,11 +29,13 @@ export interface VideoAnalysis {
   tone: string;
   keywords: string[];
   topics: string[];
-  hook: string;
-  structure: string;
+  hook: { technique: string; strength: string; reason: string };
+  structure: { pattern: string; pacing: string; loop_potential: string };
   scenes: SceneAnalysis[];
-  cta: string;
-  improvement: string;
+  engagement_triggers: string[];
+  algorithm_factors: { watch_time_optimization: string; shareability: string; shareability_reason: string };
+  weaknesses: string[];
+  improvement: string[];
 }
 
 export interface ReelDetail extends ReelMetrics {

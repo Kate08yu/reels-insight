@@ -18,7 +18,27 @@ class ReelMetrics(BaseModel):
 class SceneAnalysis(BaseModel):
     scene: int
     description: str
-    purpose: str  # 후킹/정보전달/감성/CTA 등
+    technique: str = ""
+    psychology: str = ""
+    retention_score: str = ""
+
+
+class HookAnalysis(BaseModel):
+    technique: str
+    strength: str
+    reason: str
+
+
+class StructureAnalysis(BaseModel):
+    pattern: str
+    pacing: str
+    loop_potential: str
+
+
+class AlgorithmFactors(BaseModel):
+    watch_time_optimization: str
+    shareability: str
+    shareability_reason: str
 
 
 class VideoAnalysis(BaseModel):
@@ -26,11 +46,13 @@ class VideoAnalysis(BaseModel):
     tone: str
     keywords: list[str]
     topics: list[str]
-    hook: str           # 첫 3초 후킹 방식
-    structure: str      # 전체 구성 방식 (문제제시→해결, 스토리텔링 등)
+    hook: HookAnalysis
+    structure: StructureAnalysis
     scenes: list[SceneAnalysis]
-    cta: str            # 행동 유도 방식 (댓글 유도, 저장 유도 등)
-    improvement: str    # 개선 제안
+    engagement_triggers: list[str] = []
+    algorithm_factors: AlgorithmFactors
+    weaknesses: list[str] = []
+    improvement: list[str] = []
 
 
 class ReelDetail(ReelMetrics):
