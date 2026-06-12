@@ -1,16 +1,16 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from models import CompareRequest, CompareResult, ReelDetail, VideoAnalysis
-from services.apify_service import fetch_account_reels
-from services.aggregator import compare_accounts, compute_account_stats
+from models import ReelDetail, VideoAnalysis
 from services.video_analyzer import analyze_reel
+from services.notion_service import save_analysis, get_or_create_db
 
 router = APIRouter(prefix="/api/reels", tags=["reels"])
 
 
 class AnalyzeRequest(BaseModel):
     url: str
+    save_to_notion: bool = False
 
 
 @router.post("/analyze", response_model=ReelDetail)
@@ -19,20 +19,18 @@ async def analyze_reel_endpoint(body: AnalyzeRequest):
         analysis: VideoAnalysis = await analyze_reel(body.url)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+    notion_url = None
+    if body.save_to_notion:
+        try:
+            db_id = await get_or_create_db()
+            notion_url = await save_analysis(body.url, analysis, db_id)
+        except Exception as e:
+            notion_url = f"저장 실패: {e}"
+
     return ReelDetail(
         shortcode="",
         url=body.url,
         analysis=analysis,
+        notion_url=notion_url,
     )
-
-
-@router.post("/compare", response_model=CompareResult)
-async def compare_endpoint(body: CompareRequest):
-    try:
-        reels_a = await fetch_account_reels(body.username_a, body.max_items)
-        reels_b = await fetch_account_reels(body.username_b, body.max_items)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
-    stats_a = compute_account_stats(body.username_a, reels_a)
-    stats_b = compute_account_stats(body.username_b, reels_b)
-    return compare_accounts(stats_a, stats_b)

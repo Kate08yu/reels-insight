@@ -1,6 +1,5 @@
-import { Routes, Route, NavLink } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
-import Compare from "./pages/Compare";
 
 const navStyle = (active: boolean): React.CSSProperties => ({
   padding: "8px 20px",
@@ -31,15 +30,12 @@ export default function App() {
           Reels Insight
         </span>
         <nav style={{ display: "flex", gap: 8 }}>
-          <NavLink to="/" end style={({ isActive }) => navStyle(isActive)}>대시보드</NavLink>
-          <NavLink to="/compare" style={({ isActive }) => navStyle(isActive)}>계정 비교</NavLink>
         </nav>
       </header>
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/compare" element={<Compare />} />
         </Routes>
       </main>
     </div>

@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class _StrCoerce(BaseModel):
-    """숫자 등 다른 타입을 문자열로 자동 변환하는 베이스 모델"""
     model_config = ConfigDict(coerce_numbers_to_str=True)
 
 
@@ -46,6 +45,15 @@ class AlgorithmFactors(_StrCoerce):
     shareability_reason: str
 
 
+class BenchmarkingGuide(_StrCoerce):
+    hook_template: str          # 그대로 쓸 수 있는 후킹 문장 템플릿
+    structure_template: str     # 구조 따라하기 가이드
+    visual_style: str           # 시각적 스타일 포인트
+    audio_strategy: str         # 음악/보이스오버 전략
+    caption_strategy: str       # 캡션 작성 전략
+    checklist: list[str]        # 제작 전 체크리스트
+
+
 class VideoAnalysis(_StrCoerce):
     summary: str
     tone: str
@@ -58,21 +66,12 @@ class VideoAnalysis(_StrCoerce):
     algorithm_factors: AlgorithmFactors
     weaknesses: list[str] = []
     improvement: list[str] = []
+    benchmarking: BenchmarkingGuide
 
 
 class ReelDetail(ReelMetrics):
     analysis: Optional[VideoAnalysis] = None
-
-
-class AccountStats(BaseModel):
-    username: str
-    reel_count: int
-    avg_views: float
-    avg_likes: float
-    avg_comments: float
-    avg_engagement_rate: float
-    top_hashtags: list[tuple[str, int]]
-    reels: list[ReelMetrics]
+    notion_url: Optional[str] = None
 
 
 class CompareRequest(BaseModel):
@@ -82,6 +81,6 @@ class CompareRequest(BaseModel):
 
 
 class CompareResult(BaseModel):
-    account_a: AccountStats
-    account_b: AccountStats
+    account_a: dict
+    account_b: dict
     radar: list[dict]
