@@ -1,0 +1,17 @@
+# 환경변수 (API 키 보호)
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# 기타
+.DS_Store
+Thumbs.db
