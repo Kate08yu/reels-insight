@@ -3,5 +3,6 @@ uvicorn[standard]
 httpx
 anthropic
 yt-dlp
+imageio-ffmpeg
 python-dotenv
 pydantic

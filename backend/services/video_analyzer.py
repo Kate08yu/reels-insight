@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import anthropic
+import imageio_ffmpeg
 
 from models import VideoAnalysis
 
@@ -22,9 +23,10 @@ def _download_video(url: str, dest: Path) -> Path:
 def _extract_frames(video_path: Path, out_dir: Path, interval: int = 3, max_frames: int = 10) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     pattern = str(out_dir / "frame_%03d.jpg")
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
     subprocess.run(
         [
-            "ffmpeg", "-i", str(video_path),
+            ffmpeg_exe, "-i", str(video_path),
             "-vf", f"fps=1/{interval}",
             "-vframes", str(max_frames),
             "-q:v", "2",
