@@ -80,7 +80,16 @@ PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니
 
 def _download_video(url: str, dest: Path) -> Path:
     subprocess.run(
-        ["yt-dlp", "-o", str(dest), "--quiet", "--no-warnings", url],
+        [
+            "yt-dlp",
+            "-o", str(dest),
+            "--quiet",
+            "--no-warnings",
+            "--add-header", "User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "--add-header", "Referer:https://www.instagram.com/",
+            "--no-check-certificates",
+            url,
+        ],
         check=True,
     )
     return dest
