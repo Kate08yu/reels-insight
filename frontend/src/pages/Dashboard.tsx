@@ -134,16 +134,51 @@ export default function Dashboard() {
         </div>
 
         {reelDetail?.analysis && (
-          <div style={{ marginTop: 16, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-            <p><span style={{ color: "var(--muted)", fontSize: 12 }}>요약</span><br /><strong>{reelDetail.analysis.summary}</strong></p>
-            <p><span style={{ color: "var(--muted)", fontSize: 12 }}>분위기</span><br />{reelDetail.analysis.tone}</p>
-            <div>
-              <span style={{ color: "var(--muted)", fontSize: 12 }}>키워드</span>
-              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                {reelDetail.analysis.keywords.map((k) => (
-                  <span key={k} style={{ background: "var(--surface2)", color: "var(--accent)", padding: "3px 10px", borderRadius: 20, fontSize: 13 }}>{k}</span>
-                ))}
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* 기본 정보 */}
+            <div style={cardStyle}>
+              <Row label="요약" value={<strong>{reelDetail.analysis.summary}</strong>} />
+              <Row label="분위기" value={reelDetail.analysis.tone} />
+              <div>
+                <Label>키워드</Label>
+                <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                  {reelDetail.analysis.keywords.map((k) => (
+                    <span key={k} style={tagStyle}>{k}</span>
+                  ))}
+                </div>
               </div>
+            </div>
+
+            {/* 구성 분석 */}
+            <div style={cardStyle}>
+              <h4 style={sectionTitle}>구성 분석</h4>
+              <Row label="후킹 방식" value={reelDetail.analysis.hook} />
+              <Row label="전체 구조" value={reelDetail.analysis.structure} />
+              <Row label="CTA" value={reelDetail.analysis.cta} />
+            </div>
+
+            {/* 장면별 분석 */}
+            {reelDetail.analysis.scenes?.length > 0 && (
+              <div style={cardStyle}>
+                <h4 style={sectionTitle}>장면별 분석</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {reelDetail.analysis.scenes.map((s) => (
+                    <div key={s.scene} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <span style={{ background: "var(--accent)", color: "#fff", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{s.scene}</span>
+                      <div>
+                        <div style={{ fontSize: 14 }}>{s.description}</div>
+                        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>역할: {s.purpose}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 개선 제안 */}
+            <div style={{ ...cardStyle, borderLeft: "3px solid var(--accent)" }}>
+              <h4 style={{ ...sectionTitle, color: "var(--accent)" }}>개선 제안</h4>
+              <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{reelDetail.analysis.improvement}</p>
             </div>
           </div>
         )}
@@ -151,6 +186,41 @@ export default function Dashboard() {
     </div>
   );
 }
+
+const cardStyle: React.CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius)",
+  padding: 20,
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  margin: "0 0 4px",
+  fontSize: 14,
+  fontWeight: 700,
+};
+
+const tagStyle: React.CSSProperties = {
+  background: "var(--surface2)",
+  color: "var(--accent)",
+  padding: "3px 10px",
+  borderRadius: 20,
+  fontSize: 13,
+};
+
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <span style={{ color: "var(--muted)", fontSize: 12 }}>{children}</span>
+);
+
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div>
+    <Label>{label}</Label>
+    <div style={{ marginTop: 4, fontSize: 14 }}>{value}</div>
+  </div>
+);
 
 const inputStyle: React.CSSProperties = {
   flex: 1,

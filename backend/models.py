@@ -15,11 +15,22 @@ class ReelMetrics(BaseModel):
     owner: Optional[str] = None
 
 
+class SceneAnalysis(BaseModel):
+    scene: int
+    description: str
+    purpose: str  # 후킹/정보전달/감성/CTA 등
+
+
 class VideoAnalysis(BaseModel):
     summary: str
     tone: str
     keywords: list[str]
     topics: list[str]
+    hook: str           # 첫 3초 후킹 방식
+    structure: str      # 전체 구성 방식 (문제제시→해결, 스토리텔링 등)
+    scenes: list[SceneAnalysis]
+    cta: str            # 행동 유도 방식 (댓글 유도, 저장 유도 등)
+    improvement: str    # 개선 제안
 
 
 class ReelDetail(ReelMetrics):

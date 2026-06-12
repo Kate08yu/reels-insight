@@ -16,11 +16,22 @@ export interface ReelMetrics {
   owner?: string;
 }
 
+export interface SceneAnalysis {
+  scene: number;
+  description: string;
+  purpose: string;
+}
+
 export interface VideoAnalysis {
   summary: string;
   tone: string;
   keywords: string[];
   topics: string[];
+  hook: string;
+  structure: string;
+  scenes: SceneAnalysis[];
+  cta: string;
+  improvement: string;
 }
 
 export interface ReelDetail extends ReelMetrics {
