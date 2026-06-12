@@ -1,15 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 
-const navStyle = (active: boolean): React.CSSProperties => ({
-  padding: "8px 20px",
-  borderRadius: 8,
-  background: active ? "var(--accent)" : "transparent",
-  color: active ? "#fff" : "var(--muted)",
-  fontWeight: 600,
-  fontSize: 14,
-  transition: "all .2s",
-});
 
 export default function App() {
   return (
