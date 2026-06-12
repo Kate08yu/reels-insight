@@ -118,16 +118,20 @@ async def analyze_reel(url: str) -> VideoAnalysis:
 
         response = _client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=512,
+            max_tokens=4096,
             messages=[{"role": "user", "content": content}],
         )
 
     import json
+    import re
     text = response.content[0].text.strip()
-    # JSON 블록 파싱 (마크다운 코드펜스 제거)
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
+    # 마크다운 코드펜스 제거
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+    # JSON 블록만 추출 (앞뒤 불필요한 텍스트 제거)
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        text = match.group(0)
     data = json.loads(text)
     return VideoAnalysis(**data)
