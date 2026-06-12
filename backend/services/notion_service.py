@@ -12,7 +12,7 @@ _headers = {
     "Content-Type": "application/json",
 }
 
-DB_NAME = "릴스 벤치마킹 DB"
+DB_ID = "f8fd11796b964f14bf54754b02924e34"
 
 
 async def _find_or_create_db(parent_page_id: str) -> str:
@@ -72,15 +72,23 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
 
     keywords_options = [{"name": k[:100]} for k in analysis.keywords[:5]]
 
+    loop_val = "있음" if analysis.structure.loop_potential and "없음" not in analysis.structure.loop_potential else "없음"
+
     properties = {
         "제목": {"title": [{"text": {"content": analysis.summary[:100]}}]},
         "릴스 URL": {"url": url},
         "분석일": {"date": {"start": date.today().isoformat()}},
-        "톤": {"select": {"name": analysis.tone}},
+        "콘텐츠 톤": {"select": {"name": analysis.tone}},
+        "후킹 기법": {"rich_text": [{"text": {"content": analysis.hook.technique[:200]}}]},
         "후킹 강도": {"select": {"name": analysis.hook.strength}},
         "구조 패턴": {"rich_text": [{"text": {"content": analysis.structure.pattern[:200]}}]},
+        "루프 유도": {"select": {"name": loop_val}},
         "공유 가능성": {"select": {"name": analysis.algorithm_factors.shareability}},
-        "키워드": {"multi_select": keywords_options},
+        "키워드": {"rich_text": [{"text": {"content": ", ".join(analysis.keywords[:5])}}]},
+        "약점": {"rich_text": [{"text": {"content": "\n".join(analysis.weaknesses)[:500]}}]},
+        "개선 제안": {"rich_text": [{"text": {"content": "\n".join(analysis.improvement)[:500]}}]},
+        "후킹 템플릿": {"rich_text": [{"text": {"content": analysis.benchmarking.hook_template[:300]}}]},
+        "활용 여부": {"select": {"name": "미검토"}},
     }
 
     # 페이지 본문 블록 구성
@@ -166,14 +174,4 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
 
 
 async def get_or_create_db() -> str:
-    """DB ID를 가져오거나 생성한다. parent_page가 없으면 검색만 시도."""
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{BASE}/search",
-            headers=_headers,
-            json={"query": DB_NAME, "filter": {"value": "database", "property": "object"}},
-        )
-        results = resp.json().get("results", [])
-        if results:
-            return results[0]["id"]
-    raise RuntimeError("Notion DB를 찾을 수 없습니다. 먼저 노션에서 DB를 생성하고 reels-insight integration에 연결해주세요.")
+    return DB_ID
