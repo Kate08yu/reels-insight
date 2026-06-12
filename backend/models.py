@@ -1,5 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
+
+
+class _StrCoerce(BaseModel):
+    """숫자 등 다른 타입을 문자열로 자동 변환하는 베이스 모델"""
+    model_config = ConfigDict(coerce_numbers_to_str=True)
 
 
 class ReelMetrics(BaseModel):
@@ -15,7 +20,7 @@ class ReelMetrics(BaseModel):
     owner: Optional[str] = None
 
 
-class SceneAnalysis(BaseModel):
+class SceneAnalysis(_StrCoerce):
     scene: int
     description: str
     technique: str = ""
@@ -23,25 +28,25 @@ class SceneAnalysis(BaseModel):
     retention_score: str = ""
 
 
-class HookAnalysis(BaseModel):
+class HookAnalysis(_StrCoerce):
     technique: str
     strength: str
     reason: str
 
 
-class StructureAnalysis(BaseModel):
+class StructureAnalysis(_StrCoerce):
     pattern: str
     pacing: str
     loop_potential: str
 
 
-class AlgorithmFactors(BaseModel):
+class AlgorithmFactors(_StrCoerce):
     watch_time_optimization: str
     shareability: str
     shareability_reason: str
 
 
-class VideoAnalysis(BaseModel):
+class VideoAnalysis(_StrCoerce):
     summary: str
     tone: str
     keywords: list[str]
