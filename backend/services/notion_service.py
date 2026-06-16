@@ -170,7 +170,8 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
                 "children": children[:100],  # Notion API 블록 제한
             },
         )
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise RuntimeError(f"Notion {resp.status_code}: {resp.text}")
         page = resp.json()
         return page.get("url", "")
 
