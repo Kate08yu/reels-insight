@@ -2,7 +2,7 @@ import os
 import httpx
 from models import VideoAnalysis
 
-NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
+NOTION_TOKEN = os.getenv("NOTION_TOKEN") or os.getenv("notion_token", "")
 NOTION_VERSION = "2022-06-28"
 BASE = "https://api.notion.com/v1"
 

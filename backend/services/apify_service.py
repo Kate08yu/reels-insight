@@ -3,7 +3,7 @@ import httpx
 from models import ReelMetrics
 
 
-APIFY_TOKEN = os.getenv("APIFY_API_TOKEN", "")
+APIFY_TOKEN = os.getenv("APIFY_API_TOKEN") or os.getenv("apify_api_token", "")
 ACTOR_ID = "apify~instagram-scraper"
 BASE_URL = "https://api.apify.com/v2"
 
