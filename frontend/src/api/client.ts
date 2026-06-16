@@ -5,6 +5,8 @@ const api = axios.create({ baseURL: `${BASE}/api` });
 
 export interface SceneAnalysis {
   scene: number;
+  text: string;
+  text_kr: string;
   description: string;
   technique: string;
   psychology: string;
@@ -42,5 +44,27 @@ export interface ReelDetail {
   notion_url?: string;
 }
 
+export interface AccountStats {
+  username: string;
+  reel_count: number;
+  avg_views: number;
+  avg_likes: number;
+  avg_comments: number;
+  avg_engagement_rate: number;
+  top_hashtags: [string, number][];
+}
+
 export const analyzeReel = (url: string, save_to_notion = false) =>
   api.post<ReelDetail>("/reels/analyze", { url, save_to_notion }).then((r) => r.data);
+
+export const analyzeCarousel = (files: File[], save_to_notion = false) => {
+  const form = new FormData();
+  files.forEach((f) => form.append("files", f));
+  form.append("save_to_notion", save_to_notion ? "true" : "false");
+  return api.post<ReelDetail>("/carousel/analyze", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }).then((r) => r.data);
+};
+
+export const fetchAccountStats = (username: string, max_items = 30) =>
+  api.get<AccountStats>(`/accounts/${username}`, { params: { max_items } }).then((r) => r.data);

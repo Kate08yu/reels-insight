@@ -126,8 +126,10 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
     ]
 
     for s in analysis.scenes:
+        text_line = f"  원문: {s.text}  |  해석: {s.text_kr}" if s.text else ""
         children += [
             paragraph(f"[장면 {s.scene}] {s.description}"),
+            *([ paragraph(text_line) ] if text_line else []),
             paragraph(f"  기법: {s.technique}"),
             paragraph(f"  심리 반응: {s.psychology}"),
             paragraph(f"  시청 유지 점수: {s.retention_score}/10"),

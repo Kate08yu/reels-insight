@@ -37,6 +37,8 @@ PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니
   "scenes": [
     {
       "scene": 1,
+      "text": "화면에 표시된 텍스트 원문 (영어면 영어 그대로, 없으면 빈 문자열)",
+      "text_kr": "text 필드의 한국어 번역 (text가 없으면 빈 문자열)",
       "description": "화면에서 실제로 일어나는 일 (텍스트, 동작, 구도 포함)",
       "technique": "사용된 촬영/편집 기법 (텍스트오버레이/클로즈업/점프컷/자막/전환효과 등)",
       "psychology": "이 장면이 시청자에게 유발하는 심리 반응과 그 이유",
@@ -115,6 +117,89 @@ def _extract_frames(video_path: Path, out_dir: Path, interval: int = 2, max_fram
 
 def _encode_image(path: Path) -> str:
     return base64.standard_b64encode(path.read_bytes()).decode()
+
+
+CAROUSEL_PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
+다음은 인스타그램 캐러셀 게시물의 슬라이드 이미지들입니다 (순서대로).
+
+각 슬라이드의 텍스트 원문과 한국어 번역을 포함해서, '왜 이 캐러셀이 작동하는가'와 '벤치마킹 포인트'를 전략적으로 분석하세요.
+
+아래 JSON 형식으로만 답하세요 (다른 텍스트 없이 JSON만):
+{
+  "summary": "전체 캐러셀 한 줄 요약",
+  "tone": "콘텐츠 톤(유머/정보/감성/동기부여/교육/라이프스타일 중 하나)",
+  "keywords": ["해시태그용 핵심키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
+  "topics": ["주제1", "주제2"],
+  "hook": {
+    "technique": "커버 슬라이드의 후킹 기법",
+    "strength": "강함/보통/약함",
+    "reason": "이 후킹이 효과적인/비효과적인 구체적 이유"
+  },
+  "structure": {
+    "pattern": "사용된 구조 패턴 (리스트형/스토리형/튜토리얼형/비교형 등)",
+    "pacing": "빠름/보통/느림",
+    "loop_potential": "루프 유도 여부 (없음이면 없음이라고 명시)"
+  },
+  "scenes": [
+    {
+      "scene": 1,
+      "text": "슬라이드에 표시된 텍스트 원문 (없으면 빈 문자열)",
+      "text_kr": "text 필드의 한국어 번역 (text가 없으면 빈 문자열)",
+      "description": "슬라이드 화면 구성 설명 (비주얼, 레이아웃, 색상 등)",
+      "technique": "사용된 디자인/카피 기법",
+      "psychology": "이 슬라이드가 시청자에게 유발하는 심리 반응",
+      "retention_score": "1~10 숫자만"
+    }
+  ],
+  "engagement_triggers": [
+    "저장을 유발하는 요소",
+    "공유를 유발하는 요소",
+    "댓글을 유발하는 요소"
+  ],
+  "algorithm_factors": {
+    "watch_time_optimization": "스와이프 완료율을 높이기 위한 전략",
+    "shareability": "높음/보통/낮음",
+    "shareability_reason": "공유 가능성 판단 근거"
+  },
+  "weaknesses": ["약점1", "약점2"],
+  "improvement": ["개선안1", "개선안2"],
+  "benchmarking": {
+    "hook_template": "이 캐러셀 후킹 방식을 내 콘텐츠에 적용할 수 있는 템플릿",
+    "structure_template": "이 구조를 따라 만들 때 단계별 가이드",
+    "visual_style": "시각적 스타일 특징과 따라 할 때 주의사항",
+    "audio_strategy": "캐러셀은 음악 없음 — 대신 카피 전략 및 폰트/레이아웃 분석",
+    "caption_strategy": "캡션 구성 전략",
+    "checklist": ["제작 전 체크1", "체크2", "제작 중 체크3", "업로드 전 체크4", "업로드 시 체크5"]
+  }
+}"""
+
+
+async def analyze_carousel(images_b64: list[str]) -> VideoAnalysis:
+    content: list = [{"type": "text", "text": CAROUSEL_PROMPT}]
+    for img in images_b64[:15]:
+        media_type = "image/jpeg"
+        if img.startswith("/9j/") or img.startswith("iVBOR"):
+            media_type = "image/png" if img.startswith("iVBOR") else "image/jpeg"
+        content.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": media_type, "data": img},
+        })
+
+    response = _client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=4096,
+        messages=[{"role": "user", "content": content}],
+    )
+
+    text = response.content[0].text.strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        text = match.group(0)
+    data = json.loads(text)
+    return VideoAnalysis(**data)
 
 
 async def analyze_reel(url: str) -> VideoAnalysis:

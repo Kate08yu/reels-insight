@@ -21,6 +21,8 @@ class ReelMetrics(BaseModel):
 
 class SceneAnalysis(_StrCoerce):
     scene: int
+    text: str = ""
+    text_kr: str = ""
     description: str
     technique: str = ""
     psychology: str = ""
@@ -72,6 +74,17 @@ class VideoAnalysis(_StrCoerce):
 class ReelDetail(ReelMetrics):
     analysis: Optional[VideoAnalysis] = None
     notion_url: Optional[str] = None
+
+
+class AccountStats(BaseModel):
+    username: str
+    reel_count: int
+    avg_views: float
+    avg_likes: float
+    avg_comments: float
+    avg_engagement_rate: float
+    top_hashtags: list = []
+    reels: list[ReelMetrics] = []
 
 
 class CompareRequest(BaseModel):
