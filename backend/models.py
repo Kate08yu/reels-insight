@@ -37,6 +37,7 @@ class HookAnalysis(_StrCoerce):
 
 class StructureAnalysis(_StrCoerce):
     pattern: str
+    emotion_flow: str = ""
     pacing: str
     loop_potential: str
 
@@ -69,6 +70,9 @@ class VideoAnalysis(_StrCoerce):
     weaknesses: list[str] = []
     improvement: list[str] = []
     benchmarking: BenchmarkingGuide
+    transcript: str = ""
+    transcript_kr: str = ""
+    caption_suggestions: list[str] = []
 
 
 class ReelDetail(ReelMetrics):

@@ -15,62 +15,66 @@ _headers = {
 DB_ID = "f8fd11796b964f14bf54754b02924e34"
 
 
-async def _find_or_create_db(parent_page_id: str) -> str:
-    """워크스페이스에서 DB를 찾거나 새로 만든다."""
-    async with httpx.AsyncClient(timeout=30) as client:
-        # 기존 DB 검색
-        resp = await client.post(
-            f"{BASE}/search",
-            headers=_headers,
-            json={"query": DB_NAME, "filter": {"value": "database", "property": "object"}},
-        )
-        results = resp.json().get("results", [])
-        if results:
-            return results[0]["id"]
+# ─── Block helpers ────────────────────────────────────────────────────────────
 
-        # 새 DB 생성
-        resp = await client.post(
-            f"{BASE}/databases",
-            headers=_headers,
-            json={
-                "parent": {"type": "page_id", "page_id": parent_page_id},
-                "title": [{"type": "text", "text": {"content": DB_NAME}}],
-                "properties": {
-                    "제목": {"title": {}},
-                    "릴스 URL": {"url": {}},
-                    "분석일": {"date": {}},
-                    "톤": {"select": {"options": [
-                        {"name": "유머", "color": "yellow"},
-                        {"name": "정보", "color": "blue"},
-                        {"name": "감성", "color": "pink"},
-                        {"name": "동기부여", "color": "orange"},
-                        {"name": "교육", "color": "green"},
-                        {"name": "라이프스타일", "color": "purple"},
-                    ]}},
-                    "후킹 강도": {"select": {"options": [
-                        {"name": "강함", "color": "green"},
-                        {"name": "보통", "color": "yellow"},
-                        {"name": "약함", "color": "red"},
-                    ]}},
-                    "구조 패턴": {"rich_text": {}},
-                    "공유 가능성": {"select": {"options": [
-                        {"name": "높음", "color": "green"},
-                        {"name": "보통", "color": "yellow"},
-                        {"name": "낮음", "color": "red"},
-                    ]}},
-                    "키워드": {"multi_select": {"options": []}},
-                },
-            },
-        )
-        resp.raise_for_status()
-        return resp.json()["id"]
+def heading(text: str, level: int = 2) -> dict:
+    t = f"heading_{level}"
+    return {"object": "block", "type": t, t: {"rich_text": [{"text": {"content": text}}]}}
 
+
+def paragraph(text: str) -> dict:
+    return {"object": "block", "type": "paragraph",
+            "paragraph": {"rich_text": [{"text": {"content": text[:2000]}}]}}
+
+
+def bullet(text: str) -> dict:
+    return {"object": "block", "type": "bulleted_list_item",
+            "bulleted_list_item": {"rich_text": [{"text": {"content": text[:2000]}}]}}
+
+
+def quote(text: str) -> dict:
+    return {"object": "block", "type": "quote",
+            "quote": {"rich_text": [{"text": {"content": text[:2000]}}]}}
+
+
+def code_block(text: str) -> dict:
+    return {"object": "block", "type": "code",
+            "code": {"language": "plain text",
+                     "rich_text": [{"text": {"content": text[:2000]}}]}}
+
+
+def divider() -> dict:
+    return {"object": "block", "type": "divider", "divider": {}}
+
+
+def table(header_cells: list[str], rows: list[list[str]]) -> dict:
+    def cell(text: str) -> list:
+        return [{"type": "text", "text": {"content": text[:200]}}]
+
+    header_row = {
+        "object": "block", "type": "table_row",
+        "table_row": {"cells": [cell(c) for c in header_cells]}
+    }
+    data_rows = [
+        {"object": "block", "type": "table_row",
+         "table_row": {"cells": [cell(c) for c in row]}}
+        for row in rows
+    ]
+    return {
+        "object": "block", "type": "table",
+        "table": {
+            "table_width": len(header_cells),
+            "has_column_header": True,
+            "has_row_header": False,
+        },
+        "children": [header_row] + data_rows,
+    }
+
+
+# ─── Main service ─────────────────────────────────────────────────────────────
 
 async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str, content_type: str = "릴스") -> str:
-    """분석 결과를 Notion DB에 저장하고 페이지 URL을 반환한다."""
     from datetime import date
-
-    keywords_options = [{"name": k[:100]} for k in analysis.keywords[:5]]
 
     loop_val = "있음" if analysis.structure.loop_potential and "없음" not in analysis.structure.loop_potential else "없음"
 
@@ -92,74 +96,105 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str, content_t
         "콘텐츠 유형": {"select": {"name": content_type}},
     }
 
-    # 페이지 본문 블록 구성
-    def heading(text: str) -> dict:
-        return {"object": "block", "type": "heading_2", "heading_2": {"rich_text": [{"text": {"content": text}}]}}
+    # ── 장면별 분석 테이블 ──────────────────────────────────────────────────
+    scene_rows = []
+    for s in analysis.scenes:
+        text_cell = s.text if s.text else ""
+        scene_rows.append([
+            str(s.scene),
+            text_cell,
+            s.technique,
+            s.psychology,
+            f"{s.retention_score}/10",
+        ])
+    scene_table = table(
+        ["#", "화면 텍스트", "기법", "심리 반응", "유지 점수"],
+        scene_rows,
+    )
 
-    def paragraph(text: str) -> dict:
-        return {"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": text[:2000]}}]}}
-
-    def bullet(text: str) -> dict:
-        return {"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": [{"text": {"content": text[:2000]}}]}}
-
-    def divider() -> dict:
-        return {"object": "block", "type": "divider", "divider": {}}
+    # ── 캡션 제안 블록 ───────────────────────────────────────────────────────
+    caption_blocks: list[dict] = []
+    labels = ["버전 1 — 공감형", "버전 2 — 질문형", "버전 3 — 임팩트형"]
+    for i, cap in enumerate(analysis.caption_suggestions[:3]):
+        label = labels[i] if i < len(labels) else f"버전 {i+1}"
+        caption_blocks += [heading(label, 3), code_block(cap)]
 
     children = [
+        # ── 요약 ──────────────────────────────────────────────────────────
         heading("📋 요약"),
         paragraph(f"한 줄 요약: {analysis.summary}"),
-        paragraph(f"톤: {analysis.tone}"),
+        paragraph(f"콘텐츠 톤: {analysis.tone}"),
+        paragraph(f"키워드: {' '.join('#' + k for k in analysis.keywords)}"),
+        *([ paragraph(f"주제: {', '.join(analysis.topics)}") ] if analysis.topics else []),
         divider(),
 
+        # ── 후킹 분석 ─────────────────────────────────────────────────────
         heading("🎣 후킹 분석"),
         paragraph(f"기법: {analysis.hook.technique}"),
         paragraph(f"강도: {analysis.hook.strength}"),
-        paragraph(f"분석: {analysis.hook.reason}"),
+        paragraph(f"이유: {analysis.hook.reason}"),
         divider(),
 
+        # ── 구조 분석 ─────────────────────────────────────────────────────
         heading("🏗️ 구조 분석"),
         paragraph(f"패턴: {analysis.structure.pattern}"),
+        *([ paragraph(f"감정 흐름: {analysis.structure.emotion_flow}") ] if analysis.structure.emotion_flow else []),
         paragraph(f"템포: {analysis.structure.pacing}"),
         paragraph(f"루프 유도: {analysis.structure.loop_potential}"),
         divider(),
 
+        # ── 장면별 분석 ───────────────────────────────────────────────────
         heading("🎬 장면별 분석"),
-    ]
-
-    for s in analysis.scenes:
-        text_line = f"  원문: {s.text}  |  해석: {s.text_kr}" if s.text else ""
-        children += [
-            paragraph(f"[장면 {s.scene}] {s.description}"),
-            *([ paragraph(text_line) ] if text_line else []),
-            paragraph(f"  기법: {s.technique}"),
-            paragraph(f"  심리 반응: {s.psychology}"),
-            paragraph(f"  시청 유지 점수: {s.retention_score}/10"),
-        ]
-
-    children += [
+        scene_table,
         divider(),
+
+        # ── 알고리즘 & 참여 분석 ──────────────────────────────────────────
         heading("📊 알고리즘 & 참여 분석"),
         paragraph(f"시청 완료율 전략: {analysis.algorithm_factors.watch_time_optimization}"),
         paragraph(f"공유 가능성: {analysis.algorithm_factors.shareability} — {analysis.algorithm_factors.shareability_reason}"),
-        heading("참여 유발 요소"),
+        heading("참여 유발 요소", 3),
         *[bullet(t) for t in analysis.engagement_triggers],
         divider(),
 
+        # ── 전체 대사 & 한국어 해석 ───────────────────────────────────────
+        *([
+            heading("📝 전체 대사 & 한국어 해석"),
+            heading("원문", 3),
+            quote(analysis.transcript),
+            heading("한국어 해석", 3),
+            quote(analysis.transcript_kr),
+            divider(),
+        ] if analysis.transcript else []),
+
+        # ── 약점 & 개선 제안 ──────────────────────────────────────────────
         heading("⚠️ 약점"),
         *[bullet(w) for w in analysis.weaknesses],
         heading("✅ 개선 제안"),
         *[bullet(i) for i in analysis.improvement],
         divider(),
 
+        # ── 벤치마킹 가이드 ───────────────────────────────────────────────
         heading("🎯 벤치마킹 가이드"),
-        paragraph(f"후킹 템플릿: {analysis.benchmarking.hook_template}"),
-        paragraph(f"구조 따라하기:\n{analysis.benchmarking.structure_template}"),
-        paragraph(f"시각적 스타일: {analysis.benchmarking.visual_style}"),
-        paragraph(f"오디오 전략: {analysis.benchmarking.audio_strategy}"),
-        paragraph(f"캡션 전략: {analysis.benchmarking.caption_strategy}"),
-        heading("제작 체크리스트"),
+        heading("후킹 템플릿", 3),
+        quote(analysis.benchmarking.hook_template),
+        heading("구조 따라하기", 3),
+        paragraph(analysis.benchmarking.structure_template),
+        heading("시각적 스타일", 3),
+        paragraph(analysis.benchmarking.visual_style),
+        heading("오디오 전략", 3),
+        paragraph(analysis.benchmarking.audio_strategy),
+        heading("캡션 전략", 3),
+        paragraph(analysis.benchmarking.caption_strategy),
+        heading("제작 체크리스트", 3),
         *[bullet(c) for c in analysis.benchmarking.checklist],
+        divider(),
+
+        # ── 내 계정용 캡션 제안 ───────────────────────────────────────────
+        *([heading("✍️ 내 계정용 캡션 제안")] + caption_blocks if caption_blocks else []),
     ]
+
+    # Notion API: 블록 100개 제한
+    children = children[:100]
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
@@ -168,7 +203,7 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str, content_t
             json={
                 "parent": {"database_id": db_id},
                 "properties": properties,
-                "children": children[:100],  # Notion API 블록 제한
+                "children": children,
             },
         )
         if not resp.is_success:
