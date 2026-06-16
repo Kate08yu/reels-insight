@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { VideoAnalysis } from "../api/client";
 
 const c = {
@@ -13,6 +14,15 @@ const c = {
   tag: { background: "var(--surface2)", color: "var(--accent)", padding: "3px 10px", borderRadius: 20, fontSize: 13 },
   label: { color: "var(--muted)", fontSize: 12 } as React.CSSProperties,
   sectionTitle: { margin: "0 0 4px", fontSize: 15, fontWeight: 700 } as React.CSSProperties,
+  th: {
+    padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "var(--muted)",
+    textAlign: "left" as const, borderBottom: "2px solid var(--border)",
+    background: "var(--surface2)", whiteSpace: "nowrap" as const,
+  },
+  td: {
+    padding: "8px 10px", fontSize: 13, lineHeight: 1.6,
+    borderBottom: "1px solid var(--border)", verticalAlign: "top" as const,
+  },
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => <span style={c.label}>{children}</span>;
@@ -26,6 +36,25 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 
 const strengthColor = (s: string) =>
   s === "강함" || s === "높음" ? "#4caf50" : s === "약함" || s === "낮음" ? "#ff6b6b" : "var(--accent)";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button onClick={handleCopy} style={{
+      background: copied ? "#4caf50" : "var(--surface2)",
+      color: copied ? "#fff" : "var(--muted)",
+      border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 12,
+      cursor: "pointer", transition: "all 0.15s",
+    }}>
+      {copied ? "복사됨 ✓" : "복사"}
+    </button>
+  );
+}
 
 export default function AnalysisResult({ analysis: a }: { analysis: VideoAnalysis }) {
   return (
@@ -56,42 +85,59 @@ export default function AnalysisResult({ analysis: a }: { analysis: VideoAnalysi
       <div style={c.card}>
         <h4 style={c.sectionTitle}>🏗️ 구조 분석</h4>
         <Row label="구성 패턴" value={a.structure.pattern} />
+        {a.structure.emotion_flow && <Row label="감정 흐름" value={a.structure.emotion_flow} />}
         <Row label="템포" value={a.structure.pacing} />
         <Row label="루프 유도" value={a.structure.loop_potential} />
       </div>
 
-      {/* 장면/슬라이드별 분석 */}
+      {/* 장면별 분석 — 테이블 */}
       {a.scenes?.length > 0 && (
         <div style={c.card}>
           <h4 style={c.sectionTitle}>🎬 장면별 분석</h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {a.scenes.map((s) => (
-              <div key={s.scene} style={{ display: "flex", gap: 12, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
-                <span style={{
-                  background: "var(--accent)", color: "#fff", borderRadius: "50%",
-                  width: 26, height: 26, display: "flex", alignItems: "center",
-                  justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0,
-                }}>
-                  {s.scene}
-                </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-                  {s.text && (
-                    <div style={{ background: "var(--surface2)", borderRadius: 6, padding: "6px 10px" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{s.text}</div>
-                      {s.text_kr && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{s.text_kr}</div>}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 14 }}>{s.description}</div>
-                  {s.technique && <div style={{ fontSize: 12, color: "var(--muted)" }}>기법: {s.technique}</div>}
-                  {s.psychology && <div style={{ fontSize: 12, color: "var(--muted)" }}>심리 반응: {s.psychology}</div>}
-                  {s.retention_score && (
-                    <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
-                      유지 점수: {s.retention_score}/10
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ ...c.th, width: 32 }}>#</th>
+                  <th style={c.th}>화면 텍스트</th>
+                  <th style={c.th}>기법</th>
+                  <th style={c.th}>심리 반응</th>
+                  <th style={{ ...c.th, width: 70, textAlign: "center" as const }}>유지 점수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {a.scenes.map((s) => (
+                  <tr key={s.scene}>
+                    <td style={{ ...c.td, textAlign: "center" as const }}>
+                      <span style={{
+                        background: "var(--accent)", color: "#fff", borderRadius: "50%",
+                        width: 22, height: 22, display: "inline-flex", alignItems: "center",
+                        justifyContent: "center", fontSize: 11, fontWeight: 700,
+                      }}>{s.scene}</span>
+                    </td>
+                    <td style={c.td}>
+                      {s.text ? (
+                        <>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{s.text}</div>
+                          {s.text_kr && <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>{s.text_kr}</div>}
+                        </>
+                      ) : (
+                        <span style={{ color: "var(--muted)", fontSize: 12 }}>{s.description}</span>
+                      )}
+                    </td>
+                    <td style={{ ...c.td, color: "var(--muted)", fontSize: 12 }}>{s.technique}</td>
+                    <td style={{ ...c.td, fontSize: 12 }}>{s.psychology}</td>
+                    <td style={{ ...c.td, textAlign: "center" as const }}>
+                      <span style={{
+                        color: Number(s.retention_score) >= 8 ? "#4caf50" : Number(s.retention_score) >= 6 ? "var(--accent)" : "#ff6b6b",
+                        fontWeight: 700, fontSize: 14,
+                      }}>{s.retention_score}</span>
+                      <span style={{ color: "var(--muted)", fontSize: 11 }}>/10</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -112,6 +158,31 @@ export default function AnalysisResult({ analysis: a }: { analysis: VideoAnalysi
           </div>
         )}
       </div>
+
+      {/* 전체 대사 & 한국어 해석 */}
+      {a.transcript && (
+        <div style={c.card}>
+          <h4 style={c.sectionTitle}>📝 전체 대사 & 한국어 해석</h4>
+          <div>
+            <Label>원문</Label>
+            <div style={{
+              marginTop: 6, background: "var(--surface2)", borderRadius: 8,
+              padding: "12px 14px", fontSize: 13, lineHeight: 1.8,
+              borderLeft: "3px solid var(--accent)", whiteSpace: "pre-wrap",
+            }}>{a.transcript}</div>
+          </div>
+          {a.transcript_kr && (
+            <div>
+              <Label>한국어 해석</Label>
+              <div style={{
+                marginTop: 6, background: "var(--surface2)", borderRadius: 8,
+                padding: "12px 14px", fontSize: 13, lineHeight: 1.8,
+                borderLeft: "3px solid #4caf50", whiteSpace: "pre-wrap",
+              }}>{a.transcript_kr}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 약점 & 개선안 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -154,6 +225,27 @@ export default function AnalysisResult({ analysis: a }: { analysis: VideoAnalysi
           </ul>
         </div>
       </div>
+
+      {/* 캡션 제안 */}
+      {a.caption_suggestions && a.caption_suggestions.length > 0 && (
+        <div style={c.card}>
+          <h4 style={c.sectionTitle}>✍️ 내 계정용 캡션 제안</h4>
+          {a.caption_suggestions.map((cap, i) => {
+            const labels = ["버전 1 — 공감형", "버전 2 — 질문형", "버전 3 — 임팩트형"];
+            return (
+              <div key={i} style={{ background: "var(--surface2)", borderRadius: 8, padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>
+                    {labels[i] ?? `버전 ${i + 1}`}
+                  </span>
+                  <CopyButton text={cap} />
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{cap}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

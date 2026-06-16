@@ -28,13 +28,16 @@ export interface VideoAnalysis {
   keywords: string[];
   topics: string[];
   hook: { technique: string; strength: string; reason: string };
-  structure: { pattern: string; pacing: string; loop_potential: string };
+  structure: { pattern: string; emotion_flow?: string; pacing: string; loop_potential: string };
   scenes: SceneAnalysis[];
   engagement_triggers: string[];
   algorithm_factors: { watch_time_optimization: string; shareability: string; shareability_reason: string };
   weaknesses: string[];
   improvement: string[];
   benchmarking: BenchmarkingGuide;
+  transcript?: string;
+  transcript_kr?: string;
+  caption_suggestions?: string[];
 }
 
 export interface ReelDetail {
