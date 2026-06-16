@@ -66,7 +66,7 @@ async def _find_or_create_db(parent_page_id: str) -> str:
         return resp.json()["id"]
 
 
-async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
+async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str, content_type: str = "릴스") -> str:
     """분석 결과를 Notion DB에 저장하고 페이지 URL을 반환한다."""
     from datetime import date
 
@@ -89,6 +89,7 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str) -> str:
         "개선 제안": {"rich_text": [{"text": {"content": "\n".join(analysis.improvement)[:500]}}]},
         "후킹 템플릿": {"rich_text": [{"text": {"content": analysis.benchmarking.hook_template[:300]}}]},
         "활용 여부": {"select": {"name": "미검토"}},
+        "콘텐츠 유형": {"select": {"name": content_type}},
     }
 
     # 페이지 본문 블록 구성

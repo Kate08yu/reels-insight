@@ -33,7 +33,7 @@ async def analyze_carousel_endpoint(
     if save_to_notion:
         try:
             db_id = await get_or_create_db()
-            notion_url = await save_analysis("캐러셀 업로드", analysis, db_id)
+            notion_url = await save_analysis("캐러셀 업로드", analysis, db_id, content_type="캐러셀")
         except Exception as e:
             notion_url = f"저장 실패: {e}"
 
