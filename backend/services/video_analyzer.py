@@ -120,25 +120,25 @@ def _get_duration(video_path: Path) -> float:
         return 30.0
 
 
-def _extract_frames(video_path: Path, out_dir: Path, max_frames: int = 15) -> list[Path]:
+def _extract_frames(video_path: Path, out_dir: Path, max_frames: int = 18) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     duration = _get_duration(video_path)
-    interval = max(1, int(duration / max_frames))
-    print(f"[Frames] duration={duration:.1f}s interval={interval}s max={max_frames}")
-    pattern = str(out_dir / "frame_%03d.jpg")
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-    subprocess.run(
-        [
-            ffmpeg_exe, "-i", str(video_path),
-            "-vf", f"fps=1/{interval}",
-            "-vframes", str(max_frames),
-            "-q:v", "2",
-            pattern,
-            "-y", "-loglevel", "error",
-        ],
-        check=True,
-    )
-    return sorted(out_dir.glob("frame_*.jpg"))
+    # 영상 전체를 max_frames 등분해서 각 지점의 프레임 추출
+    timestamps = [duration * i / (max_frames - 1) for i in range(max_frames)]
+    print(f"[Frames] duration={duration:.1f}s, {max_frames} frames at: {[f'{t:.1f}' for t in timestamps]}")
+    frames = []
+    for i, ts in enumerate(timestamps):
+        out_path = out_dir / f"frame_{i:03d}.jpg"
+        subprocess.run(
+            [ffmpeg_exe, "-ss", str(ts), "-i", str(video_path),
+             "-frames:v", "1", "-q:v", "2", str(out_path),
+             "-y", "-loglevel", "error"],
+            check=False,
+        )
+        if out_path.exists():
+            frames.append(out_path)
+    return sorted(frames)
 
 
 def _encode_image(path: Path) -> str:
