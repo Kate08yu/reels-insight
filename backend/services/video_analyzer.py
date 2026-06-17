@@ -134,25 +134,25 @@ def _transcribe_audio(video_path: Path) -> str:
         return ""
     audio_path = video_path.parent / "audio.mp3"
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-    subprocess.run(
+    result = subprocess.run(
         [ffmpeg_exe, "-i", str(video_path), "-vn", "-q:a", "0", str(audio_path), "-y", "-loglevel", "error"],
-        check=True,
+        check=False,
     )
-    if not audio_path.exists() or audio_path.stat().st_size == 0:
+    if result.returncode != 0 or not audio_path.exists() or audio_path.stat().st_size == 0:
         return ""
     oa_client = openai.OpenAI(api_key=_openai_key)
     with open(audio_path, "rb") as f:
-        result = oa_client.audio.transcriptions.create(
+        transcript = oa_client.audio.transcriptions.create(
             model="whisper-1",
             file=f,
             response_format="verbose_json",
             timestamp_granularities=["segment"],
         )
-    segments = getattr(result, "segments", None) or []
+    segments = getattr(transcript, "segments", None) or []
     if segments:
         lines = [f"[{s['start']:.1f}s] {s['text'].strip()}" for s in segments]
         return "\n".join(lines)
-    return getattr(result, "text", "") or ""
+    return getattr(transcript, "text", "") or ""
 
 
 CAROUSEL_PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
@@ -293,7 +293,10 @@ async def analyze_reel(url: str, caption: str = "") -> VideoAnalysis:
         if not frames:
             raise RuntimeError("프레임 추출 실패")
 
-        whisper_transcript = _transcribe_audio(video_path)
+        try:
+            whisper_transcript = _transcribe_audio(video_path)
+        except Exception:
+            whisper_transcript = ""
         return _frames_to_analysis(frames, caption, whisper_transcript)
 
 
@@ -309,5 +312,8 @@ async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnal
         if not frames:
             raise RuntimeError("프레임 추출 실패 — 유효한 동영상 파일인지 확인하세요.")
 
-        whisper_transcript = _transcribe_audio(video_path)
+        try:
+            whisper_transcript = _transcribe_audio(video_path)
+        except Exception:
+            whisper_transcript = ""
         return _frames_to_analysis(frames, caption, whisper_transcript)
