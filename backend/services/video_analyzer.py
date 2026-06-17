@@ -218,8 +218,12 @@ async def analyze_carousel(images_b64: list[str]) -> VideoAnalysis:
     return VideoAnalysis(**data)
 
 
-def _frames_to_analysis(frames: list[Path]) -> VideoAnalysis:
-    content: list = [{"type": "text", "text": PROMPT}]
+def _frames_to_analysis(frames: list[Path], caption: str = "") -> VideoAnalysis:
+    prompt_text = PROMPT
+    if caption.strip():
+        prompt_text += f"\n\n아래는 이 게시물의 원본 캡션입니다. 캡션의 해시태그, 문구, CTA 전략도 함께 분석하세요:\n\n---\n{caption.strip()}\n---"
+
+    content: list = [{"type": "text", "text": prompt_text}]
     for frame in frames[:12]:
         content.append({
             "type": "image",
@@ -247,7 +251,7 @@ def _frames_to_analysis(frames: list[Path]) -> VideoAnalysis:
     return VideoAnalysis(**data)
 
 
-async def analyze_reel(url: str) -> VideoAnalysis:
+async def analyze_reel(url: str, caption: str = "") -> VideoAnalysis:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         video_path = tmp_path / "reel.mp4"
@@ -259,10 +263,10 @@ async def analyze_reel(url: str) -> VideoAnalysis:
         if not frames:
             raise RuntimeError("프레임 추출 실패")
 
-        return _frames_to_analysis(frames)
+        return _frames_to_analysis(frames, caption)
 
 
-async def analyze_video_file(video_bytes: bytes) -> VideoAnalysis:
+async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnalysis:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         video_path = tmp_path / "upload.mp4"
@@ -274,4 +278,4 @@ async def analyze_video_file(video_bytes: bytes) -> VideoAnalysis:
         if not frames:
             raise RuntimeError("프레임 추출 실패 — 유효한 동영상 파일인지 확인하세요.")
 
-        return _frames_to_analysis(frames)
+        return _frames_to_analysis(frames, caption)

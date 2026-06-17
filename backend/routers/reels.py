@@ -11,12 +11,13 @@ router = APIRouter(prefix="/api/reels", tags=["reels"])
 class AnalyzeRequest(BaseModel):
     url: str
     save_to_notion: bool = False
+    caption: str = ""
 
 
 @router.post("/analyze", response_model=ReelDetail)
 async def analyze_reel_endpoint(body: AnalyzeRequest):
     try:
-        analysis: VideoAnalysis = await analyze_reel(body.url)
+        analysis: VideoAnalysis = await analyze_reel(body.url, body.caption)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -40,13 +41,14 @@ async def analyze_reel_endpoint(body: AnalyzeRequest):
 async def analyze_upload_endpoint(
     file: UploadFile = File(...),
     save_to_notion: bool = Form(True),
+    caption: str = Form(""),
 ):
     video_bytes = await file.read()
     if len(video_bytes) > 200 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="파일 크기는 200MB 이하여야 합니다.")
 
     try:
-        analysis: VideoAnalysis = await analyze_video_file(video_bytes)
+        analysis: VideoAnalysis = await analyze_video_file(video_bytes, caption)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 

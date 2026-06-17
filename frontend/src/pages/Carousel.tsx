@@ -5,7 +5,7 @@ import AnalysisResult from "../components/AnalysisResult";
 export default function Carousel() {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [saveToNotion, setSaveToNotion] = useState(false);
+  const saveToNotion = true;
   const [result, setResult] = useState<ReelDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -129,24 +129,30 @@ export default function Carousel() {
           >
             {loading ? `분석 중… (${files.length}장)` : `분석하기 (${files.length}장)`}
           </button>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-            <input type="checkbox" checked={saveToNotion} onChange={(e) => setSaveToNotion(e.target.checked)} />
-            노션에 자동 저장
-          </label>
         </div>
         {error && <p style={{ color: "#ff6b6b", marginTop: 8, fontSize: 13 }}>{error}</p>}
       </section>
 
       {result?.notion_url && (
-        <div style={{ ...c.card, borderLeft: "3px solid #4caf50", flexDirection: "row", alignItems: "center", gap: 12, display: "flex" }}>
-          <span style={{ fontSize: 18 }}>✅</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>노션에 저장됐습니다</div>
-            <a href={result.notion_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--accent)" }}>
-              노션에서 보기 →
-            </a>
+        result.notion_url.startsWith("http") ? (
+          <div style={{ ...c.card, borderLeft: "3px solid #4caf50", display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 18 }}>✅</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>노션에 저장됐습니다</div>
+              <a href={result.notion_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--accent)" }}>
+                노션에서 보기 →
+              </a>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ ...c.card, borderLeft: "3px solid #ff6b6b", display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#ff6b6b" }}>노션 저장 실패</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{result.notion_url}</div>
+            </div>
+          </div>
+        )
       )}
 
       {result?.analysis && <AnalysisResult analysis={result.analysis} />}

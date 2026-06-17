@@ -37,6 +37,7 @@ const c = {
 export default function Dashboard() {
   const [tab, setTab] = useState<"url" | "file">("url");
   const [reelUrl, setReelUrl] = useState("");
+  const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const saveToNotion = true;
@@ -60,13 +61,14 @@ export default function Dashboard() {
     try {
       if (tab === "url") {
         if (!reelUrl.trim()) return;
-        const data = await analyzeReel(reelUrl.trim(), saveToNotion);
+        const data = await analyzeReel(reelUrl.trim(), saveToNotion, caption);
         setResult(data);
       } else {
         if (!file) return;
         const form = new FormData();
         form.append("file", file);
         form.append("save_to_notion", "true");
+        form.append("caption", caption);
         const res = await axios.post<ReelDetail>(`${BASE}/api/reels/analyze-upload`, form, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -113,17 +115,31 @@ export default function Dashboard() {
 
         {/* URL 입력 */}
         {tab === "url" && (
-          <div style={{ display: "flex", gap: 12 }}>
-            <input
-              value={reelUrl}
-              onChange={(e) => setReelUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-              placeholder="https://www.instagram.com/reel/..."
-              style={{ ...c.input, flex: 2 }}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 12 }}>
+              <input
+                value={reelUrl}
+                onChange={(e) => setReelUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+                placeholder="https://www.instagram.com/reel/..."
+                style={{ ...c.input, flex: 2 }}
+              />
+              <button onClick={handleAnalyze} disabled={loading || !canSubmit} style={c.btn}>
+                {loading ? "분석 중…" : "분석"}
+              </button>
+            </div>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="인스타그램 캡션을 여기에 붙여넣기 하세요 (선택사항) — 캡션을 함께 분석해 더 정확한 결과를 제공합니다"
+              rows={3}
+              style={{
+                ...c.input,
+                resize: "vertical",
+                fontFamily: "inherit",
+                lineHeight: 1.5,
+              }}
             />
-            <button onClick={handleAnalyze} disabled={loading || !canSubmit} style={c.btn}>
-              {loading ? "분석 중…" : "분석"}
-            </button>
           </div>
         )}
 
@@ -178,6 +194,18 @@ export default function Dashboard() {
                 style={{ width: "100%", maxHeight: 200, borderRadius: 8, background: "#000" }}
               />
             )}
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="인스타그램 캡션을 여기에 붙여넣기 하세요 (선택사항) — 캡션을 함께 분석해 더 정확한 결과를 제공합니다"
+              rows={3}
+              style={{
+                ...c.input,
+                resize: "vertical",
+                fontFamily: "inherit",
+                lineHeight: 1.5,
+              }}
+            />
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <button
                 onClick={handleAnalyze}

@@ -57,8 +57,8 @@ export interface AccountStats {
   top_hashtags: [string, number][];
 }
 
-export const analyzeReel = (url: string, save_to_notion = false) =>
-  api.post<ReelDetail>("/reels/analyze", { url, save_to_notion }).then((r) => r.data);
+export const analyzeReel = (url: string, save_to_notion = false, caption = "") =>
+  api.post<ReelDetail>("/reels/analyze", { url, save_to_notion, caption }).then((r) => r.data);
 
 export const analyzeCarousel = (files: File[], save_to_notion = false) => {
   const form = new FormData();
