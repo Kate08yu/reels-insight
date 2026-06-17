@@ -8,10 +8,12 @@ from pathlib import Path
 
 import anthropic
 import imageio_ffmpeg
+import openai
 
 from models import VideoAnalysis
 
 _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+_openai_key = os.getenv("OPENAI_API_KEY", "")
 
 PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
 다음은 릴스 영상에서 시간 순서대로 추출한 프레임들입니다.
@@ -127,6 +129,32 @@ def _encode_image(path: Path) -> str:
     return base64.standard_b64encode(path.read_bytes()).decode()
 
 
+def _transcribe_audio(video_path: Path) -> str:
+    if not _openai_key:
+        return ""
+    audio_path = video_path.parent / "audio.mp3"
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    subprocess.run(
+        [ffmpeg_exe, "-i", str(video_path), "-vn", "-q:a", "0", str(audio_path), "-y", "-loglevel", "error"],
+        check=True,
+    )
+    if not audio_path.exists() or audio_path.stat().st_size == 0:
+        return ""
+    oa_client = openai.OpenAI(api_key=_openai_key)
+    with open(audio_path, "rb") as f:
+        result = oa_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=f,
+            response_format="verbose_json",
+            timestamp_granularities=["segment"],
+        )
+    segments = getattr(result, "segments", None) or []
+    if segments:
+        lines = [f"[{s['start']:.1f}s] {s['text'].strip()}" for s in segments]
+        return "\n".join(lines)
+    return getattr(result, "text", "") or ""
+
+
 CAROUSEL_PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
 다음은 인스타그램 캐러셀 게시물의 슬라이드 이미지들입니다 (순서대로).
 
@@ -218,8 +246,10 @@ async def analyze_carousel(images_b64: list[str]) -> VideoAnalysis:
     return VideoAnalysis(**data)
 
 
-def _frames_to_analysis(frames: list[Path], caption: str = "") -> VideoAnalysis:
+def _frames_to_analysis(frames: list[Path], caption: str = "", whisper_transcript: str = "") -> VideoAnalysis:
     prompt_text = PROMPT
+    if whisper_transcript.strip():
+        prompt_text += f"\n\n아래는 Whisper로 추출한 영상의 전체 음성/자막 전사본입니다 (타임스탬프 포함). 각 장면 분석 시 해당 시점의 텍스트를 정확히 반영하세요:\n\n---\n{whisper_transcript.strip()}\n---"
     if caption.strip():
         prompt_text += f"\n\n아래는 이 게시물의 원본 캡션입니다. 캡션의 해시태그, 문구, CTA 전략도 함께 분석하세요:\n\n---\n{caption.strip()}\n---"
 
@@ -263,7 +293,8 @@ async def analyze_reel(url: str, caption: str = "") -> VideoAnalysis:
         if not frames:
             raise RuntimeError("프레임 추출 실패")
 
-        return _frames_to_analysis(frames, caption)
+        whisper_transcript = _transcribe_audio(video_path)
+        return _frames_to_analysis(frames, caption, whisper_transcript)
 
 
 async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnalysis:
@@ -278,4 +309,5 @@ async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnal
         if not frames:
             raise RuntimeError("프레임 추출 실패 — 유효한 동영상 파일인지 확인하세요.")
 
-        return _frames_to_analysis(frames, caption)
+        whisper_transcript = _transcribe_audio(video_path)
+        return _frames_to_analysis(frames, caption, whisper_transcript)

@@ -7,3 +7,4 @@ imageio-ffmpeg
 python-dotenv
 pydantic
 python-multipart
+openai
