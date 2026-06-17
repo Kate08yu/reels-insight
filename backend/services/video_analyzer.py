@@ -122,23 +122,47 @@ def _get_duration(video_path: Path) -> float:
 
 def _extract_frames(video_path: Path, out_dir: Path, max_frames: int = 18) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    duration = _get_duration(video_path)
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-    # 영상 전체를 max_frames 등분해서 각 지점의 프레임 추출
-    timestamps = [duration * i / (max_frames - 1) for i in range(max_frames)]
-    print(f"[Frames] duration={duration:.1f}s, {max_frames} frames at: {[f'{t:.1f}' for t in timestamps]}")
-    frames = []
-    for i, ts in enumerate(timestamps):
-        out_path = out_dir / f"frame_{i:03d}.jpg"
-        subprocess.run(
-            [ffmpeg_exe, "-ss", str(ts), "-i", str(video_path),
-             "-frames:v", "1", "-q:v", "2", str(out_path),
-             "-y", "-loglevel", "error"],
-            check=False,
-        )
-        if out_path.exists():
-            frames.append(out_path)
-    return sorted(frames)
+    scene_dir = out_dir / "scene"
+    scene_dir.mkdir(exist_ok=True)
+
+    # 1차: 장면 전환 감지 (threshold 0.3)
+    subprocess.run(
+        [ffmpeg_exe, "-i", str(video_path),
+         "-vf", "select='gt(scene,0.30)',setpts=N/FRAME_RATE/TB",
+         "-vsync", "vfr", "-q:v", "2",
+         str(scene_dir / "frame_%03d.jpg"),
+         "-y", "-loglevel", "error"],
+        check=False,
+    )
+    scene_frames = sorted(scene_dir.glob("frame_*.jpg"))
+    print(f"[Frames] scene detection found {len(scene_frames)} frames")
+
+    # 장면 전환이 너무 적으면 균등 분할로 폴백
+    if len(scene_frames) < 5:
+        print("[Frames] too few scene frames, falling back to uniform sampling")
+        duration = _get_duration(video_path)
+        timestamps = [duration * i / (max_frames - 1) for i in range(max_frames)]
+        frames = []
+        for i, ts in enumerate(timestamps):
+            out_path = out_dir / f"frame_{i:03d}.jpg"
+            subprocess.run(
+                [ffmpeg_exe, "-ss", str(ts), "-i", str(video_path),
+                 "-frames:v", "1", "-q:v", "2", str(out_path),
+                 "-y", "-loglevel", "error"],
+                check=False,
+            )
+            if out_path.exists():
+                frames.append(out_path)
+        return sorted(frames)
+
+    # 장면이 max_frames 초과 시 균등하게 추림
+    if len(scene_frames) > max_frames:
+        step = len(scene_frames) / max_frames
+        scene_frames = [scene_frames[int(i * step)] for i in range(max_frames)]
+        print(f"[Frames] trimmed to {len(scene_frames)} frames")
+
+    return scene_frames
 
 
 def _encode_image(path: Path) -> str:
