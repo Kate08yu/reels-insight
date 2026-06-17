@@ -155,6 +155,16 @@ def _transcribe_audio(video_path: Path) -> str:
     return getattr(transcript, "text", "") or ""
 
 
+def _clean_whisper(whisper_transcript: str) -> str:
+    lines = []
+    for line in whisper_transcript.split("\n"):
+        if "] " in line:
+            lines.append(line.split("] ", 1)[1])
+        else:
+            lines.append(line)
+    return " ".join(lines).strip()
+
+
 CAROUSEL_PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
 다음은 인스타그램 캐러셀 게시물의 슬라이드 이미지들입니다 (순서대로).
 
@@ -297,7 +307,10 @@ async def analyze_reel(url: str, caption: str = "") -> VideoAnalysis:
             whisper_transcript = _transcribe_audio(video_path)
         except Exception:
             whisper_transcript = ""
-        return _frames_to_analysis(frames, caption, whisper_transcript)
+        analysis = _frames_to_analysis(frames, caption, whisper_transcript)
+        if whisper_transcript:
+            analysis.transcript = _clean_whisper(whisper_transcript)
+        return analysis
 
 
 async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnalysis:
@@ -316,4 +329,7 @@ async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnal
             whisper_transcript = _transcribe_audio(video_path)
         except Exception:
             whisper_transcript = ""
-        return _frames_to_analysis(frames, caption, whisper_transcript)
+        analysis = _frames_to_analysis(frames, caption, whisper_transcript)
+        if whisper_transcript:
+            analysis.transcript = _clean_whisper(whisper_transcript)
+        return analysis
