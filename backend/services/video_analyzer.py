@@ -13,7 +13,6 @@ import openai
 from models import VideoAnalysis
 
 _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
-_openai_key = os.getenv("OPENAI_API_KEY", "")
 
 PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
 다음은 릴스 영상에서 시간 순서대로 추출한 프레임들입니다.
@@ -107,8 +106,25 @@ def _download_video(url: str, dest: Path) -> Path:
     return dest
 
 
-def _extract_frames(video_path: Path, out_dir: Path, interval: int = 1, max_frames: int = 12) -> list[Path]:
+def _get_duration(video_path: Path) -> float:
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    ffprobe = ffmpeg_exe.replace("ffmpeg", "ffprobe")
+    r = subprocess.run(
+        [ffprobe, "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
+        capture_output=True, text=True,
+    )
+    try:
+        return float(r.stdout.strip())
+    except Exception:
+        return 30.0
+
+
+def _extract_frames(video_path: Path, out_dir: Path, max_frames: int = 15) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
+    duration = _get_duration(video_path)
+    interval = max(1, int(duration / max_frames))
+    print(f"[Frames] duration={duration:.1f}s interval={interval}s max={max_frames}")
     pattern = str(out_dir / "frame_%03d.jpg")
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
     subprocess.run(
@@ -130,8 +146,9 @@ def _encode_image(path: Path) -> str:
 
 
 def _transcribe_audio(video_path: Path) -> str:
-    print(f"[Whisper] key set: {bool(_openai_key)}, video: {video_path}, exists: {video_path.exists()}")
-    if not _openai_key:
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    print(f"[Whisper] key set: {bool(openai_key)}, video exists: {video_path.exists()}")
+    if not openai_key:
         print("[Whisper] OPENAI_API_KEY not set, skipping")
         return ""
     audio_path = video_path.parent / "audio.mp3"
@@ -142,7 +159,7 @@ def _transcribe_audio(video_path: Path) -> str:
     )
     if result.returncode != 0 or not audio_path.exists() or audio_path.stat().st_size == 0:
         return ""
-    oa_client = openai.OpenAI(api_key=_openai_key)
+    oa_client = openai.OpenAI(api_key=openai_key)
     with open(audio_path, "rb") as f:
         transcript = oa_client.audio.transcriptions.create(
             model="whisper-1",
