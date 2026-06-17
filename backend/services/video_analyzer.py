@@ -130,7 +130,9 @@ def _encode_image(path: Path) -> str:
 
 
 def _transcribe_audio(video_path: Path) -> str:
+    print(f"[Whisper] key set: {bool(_openai_key)}, video: {video_path}, exists: {video_path.exists()}")
     if not _openai_key:
+        print("[Whisper] OPENAI_API_KEY not set, skipping")
         return ""
     audio_path = video_path.parent / "audio.mp3"
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
@@ -296,8 +298,10 @@ async def analyze_reel(url: str, caption: str = "") -> VideoAnalysis:
 
         try:
             whisper_transcript = _transcribe_audio(video_path)
-        except Exception:
+        except Exception as e:
+            print(f"[Whisper] error in analyze_reel: {e}")
             whisper_transcript = ""
+        print(f"[Whisper] final transcript length: {len(whisper_transcript)}")
         analysis = _frames_to_analysis(frames, caption, whisper_transcript)
         if whisper_transcript:
             analysis.transcript = _clean_whisper(whisper_transcript)
@@ -318,8 +322,10 @@ async def analyze_video_file(video_bytes: bytes, caption: str = "") -> VideoAnal
 
         try:
             whisper_transcript = _transcribe_audio(video_path)
-        except Exception:
+        except Exception as e:
+            print(f"[Whisper] error in analyze_video_file: {e}")
             whisper_transcript = ""
+        print(f"[Whisper] final transcript length: {len(whisper_transcript)}")
         analysis = _frames_to_analysis(frames, caption, whisper_transcript)
         if whisper_transcript:
             analysis.transcript = _clean_whisper(whisper_transcript)
