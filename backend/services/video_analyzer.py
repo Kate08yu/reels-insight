@@ -105,7 +105,7 @@ def _download_video(url: str, dest: Path) -> Path:
     return dest
 
 
-def _extract_frames(video_path: Path, out_dir: Path, interval: int = 2, max_frames: int = 12) -> list[Path]:
+def _extract_frames(video_path: Path, out_dir: Path, interval: int = 1, max_frames: int = 20) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     pattern = str(out_dir / "frame_%03d.jpg")
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
@@ -224,7 +224,7 @@ def _frames_to_analysis(frames: list[Path], caption: str = "") -> VideoAnalysis:
         prompt_text += f"\n\n아래는 이 게시물의 원본 캡션입니다. 캡션의 해시태그, 문구, CTA 전략도 함께 분석하세요:\n\n---\n{caption.strip()}\n---"
 
     content: list = [{"type": "text", "text": prompt_text}]
-    for frame in frames[:12]:
+    for frame in frames[:20]:
         content.append({
             "type": "image",
             "source": {

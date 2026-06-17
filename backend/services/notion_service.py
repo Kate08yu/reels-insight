@@ -100,15 +100,17 @@ async def save_analysis(url: str, analysis: VideoAnalysis, db_id: str, content_t
     scene_rows = []
     for s in analysis.scenes:
         text_cell = s.text if s.text else ""
+        text_kr_cell = s.text_kr if s.text_kr else ""
+        combined = f"{text_cell}\n({text_kr_cell})" if text_cell and text_kr_cell else text_cell or text_kr_cell
         scene_rows.append([
             str(s.scene),
-            text_cell,
+            combined,
             s.technique,
             s.psychology,
             f"{s.retention_score}/10",
         ])
     scene_table = table(
-        ["#", "화면 텍스트", "기법", "심리 반응", "유지 점수"],
+        ["#", "화면 텍스트 (한글)", "기법", "심리 반응", "유지 점수"],
         scene_rows,
     )
 
