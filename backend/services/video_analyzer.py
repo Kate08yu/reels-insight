@@ -218,6 +218,35 @@ async def analyze_carousel(images_b64: list[str]) -> VideoAnalysis:
     return VideoAnalysis(**data)
 
 
+def _frames_to_analysis(frames: list[Path]) -> VideoAnalysis:
+    content: list = [{"type": "text", "text": PROMPT}]
+    for frame in frames[:12]:
+        content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": _encode_image(frame),
+            },
+        })
+
+    response = _client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=8192,
+        messages=[{"role": "user", "content": content}],
+    )
+
+    text = response.content[0].text.strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        text = match.group(0)
+    data = json.loads(text)
+    return VideoAnalysis(**data)
+
+
 async def analyze_reel(url: str) -> VideoAnalysis:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -230,29 +259,19 @@ async def analyze_reel(url: str) -> VideoAnalysis:
         if not frames:
             raise RuntimeError("프레임 추출 실패")
 
-        content: list = [{"type": "text", "text": PROMPT}]
-        for frame in frames[:12]:
-            content.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/jpeg",
-                    "data": _encode_image(frame),
-                },
-            })
+        return _frames_to_analysis(frames)
 
-        response = _client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": content}],
-        )
 
-    text = response.content[0].text.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
-    text = text.strip()
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        text = match.group(0)
-    data = json.loads(text)
-    return VideoAnalysis(**data)
+async def analyze_video_file(video_bytes: bytes) -> VideoAnalysis:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        video_path = tmp_path / "upload.mp4"
+        frames_dir = tmp_path / "frames"
+
+        video_path.write_bytes(video_bytes)
+        frames = _extract_frames(video_path, frames_dir)
+
+        if not frames:
+            raise RuntimeError("프레임 추출 실패 — 유효한 동영상 파일인지 확인하세요.")
+
+        return _frames_to_analysis(frames)
