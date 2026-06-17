@@ -145,24 +145,15 @@ def _transcribe_audio(video_path: Path) -> str:
         transcript = oa_client.audio.transcriptions.create(
             model="whisper-1",
             file=f,
-            response_format="verbose_json",
-            timestamp_granularities=["segment"],
+            response_format="text",
         )
-    segments = getattr(transcript, "segments", None) or []
-    if segments:
-        lines = [f"[{s['start']:.1f}s] {s['text'].strip()}" for s in segments]
-        return "\n".join(lines)
-    return getattr(transcript, "text", "") or ""
+    result = transcript if isinstance(transcript, str) else str(transcript)
+    print(f"[Whisper] transcript ({len(result)} chars): {result[:200]}")
+    return result
 
 
 def _clean_whisper(whisper_transcript: str) -> str:
-    lines = []
-    for line in whisper_transcript.split("\n"):
-        if "] " in line:
-            lines.append(line.split("] ", 1)[1])
-        else:
-            lines.append(line)
-    return " ".join(lines).strip()
+    return whisper_transcript.strip()
 
 
 CAROUSEL_PROMPT = """당신은 인스타그램 바이럴 콘텐츠 전략 전문가입니다.
