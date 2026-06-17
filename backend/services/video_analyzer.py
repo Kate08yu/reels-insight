@@ -107,14 +107,14 @@ def _download_video(url: str, dest: Path) -> Path:
 
 
 def _get_duration(video_path: Path) -> float:
-    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-    ffprobe = ffmpeg_exe.replace("ffmpeg", "ffprobe")
-    r = subprocess.run(
-        [ffprobe, "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
-        capture_output=True, text=True,
-    )
     try:
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        ffprobe = ffmpeg_exe.replace("ffmpeg", "ffprobe")
+        r = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
+            capture_output=True, text=True,
+        )
         return float(r.stdout.strip())
     except Exception:
         return 30.0
