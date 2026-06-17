@@ -66,8 +66,8 @@ def table(header_cells: list[str], rows: list[list[str]]) -> dict:
             "table_width": len(header_cells),
             "has_column_header": True,
             "has_row_header": False,
+            "children": [header_row] + data_rows,
         },
-        "children": [header_row] + data_rows,
     }
 
 
